@@ -1,6 +1,5 @@
 import java.util.Arrays;
 import java.util.List;
-
 import static java.util.Arrays.*;
 
 /**
@@ -18,7 +17,7 @@ public class belief {
     static final double pleft = 1d/10;
     static final double pright = 1d/10;
     static final double pfwd = 8d/10;
-    // index zero for maxWalls is equivalent to end
+    // index zero for maxWalls is equivalent to "end" being observed
     static final int maxWalls = 3;
     // observation model probabilities
     static double[][][] obsModl = new double[maxCol][maxRow][maxWalls];
@@ -30,13 +29,11 @@ public class belief {
     static String[] actions;
     static int[] evidence;
 
-
-
     public static void setUp() {
         for (int col = 0; col < maxCol; col++) {
             for (int row = 0; row < maxRow; row++) {
                 if (startGiven) currBelief[col][row] = 0;
-                else currBelief[col][row] = 1d/9;
+                else currBelief[col][row] = 1d/nonTerminalStates;
                 // Non-terminal in third column
                 if (col == 2) {
                     obsModl[col][row][0] = 0.0;
@@ -53,7 +50,7 @@ public class belief {
         }
         // set starting belief and adjust for zero indexing
         if (startGiven) currBelief[startCol-1][startRow-1] = 1;
-        // set belief of (2,2) = [1][1] to 0
+        // set belief of (2,2) = [1][1] to 0 (represents a column)
         currBelief[1][1] = 0;
         // set terminal states to probability 0
         currBelief[3][2] = 0;
@@ -70,12 +67,11 @@ public class belief {
         obsModl[3][1][0] = 1d;
         obsModl[3][1][1] = 0;
         obsModl[3][1][2] = 0;
-        System.out.println("Obs model");
-        String[] a = deepToString(obsModl).split("]],");
-        for (String s : a) {System.out.println(s);}
+//        System.out.println("Obs model");
+//        String[] a = deepToString(obsModl).split("]],");
+//        for (String s : a) {System.out.println(s);}
     }
 
-    // (right, right, up) (1,1,end) with S0 = (2,3)
     public static int parseArgs(String[] args) {
         String[] as = args[0].split(",");
         actions = new String[as.length];
@@ -105,20 +101,15 @@ public class belief {
             String[] pos = args[2].split(",");
             startCol = Integer.parseInt(pos[0]);
             startRow = Integer.parseInt(pos[1]);
+            System.out.println("Starting state: S0=("+ (startCol) + "," + (startRow)+")\n");
         }
         return 1;
     }
 
     public static double updateBelief(String action, int evidence, int col, int row) {
-        // P(e|s')
-//        System.out.println(action + evidence);
         nextBelief[col][row] = obsModl[col][row][evidence] * move(col, row, action, evidence);
         return nextBelief[col][row];
     }
-
-//    public static double currBelief(int col, int row, int e) {
-//        return currBelief[col][row]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
-//    }
 
     public static int wallCheck(int col, int row) {
         // if no wall collision return 1 and add/subtract it to/from col or row
@@ -155,14 +146,13 @@ public class belief {
                 calc =
                         pfwd*currBelief[col][rowDn] * bouncedDn +// bounced from wall going down
                         pfwd*currBelief[col][rowUp] * wallCheck(col, row+1) +//cannot come from above boundary
-                        pright*currBelief[colLt][row] + pleft*currBelief[colRt][row];  // moved sideways
+                        pright*currBelief[colLt][row] + pleft*currBelief[colRt][row]; // moved sideways
                 return calc;
             case "left":
-                // assume 1,1                1,2   +   1,0 = 1,1 due to hit wall +          2,1
                 calc =
                         pfwd*currBelief[colLt][row] * bouncedLt + // bounced from wall going left
                         pfwd*currBelief[colRt][row] * wallCheck(col+1, row) + // cannot come from right of boundary
-                        pleft*currBelief[col][rowUp] + pright*currBelief[col][rowDn];
+                        pleft*currBelief[col][rowUp] + pright*currBelief[col][rowDn]; // moved sideways
                 return calc;
             case "right":
 //                System.out.format("(%x,%x): ", col, row);
@@ -172,7 +162,7 @@ public class belief {
                 calc =
                         pfwd*currBelief[colRt][row] * bouncedRt + // bounced from wall going right
                         pfwd*currBelief[colLt][row] * wallCheck(col-1, row) +  // cannot come from left of boundary
-                        pright*currBelief[col][rowUp] + pleft*currBelief[col][rowDn];
+                        pright*currBelief[col][rowUp] + pleft*currBelief[col][rowDn]; // moved sideways
                 return calc;
             default:
                 System.out.println("Invalid action was passed");
@@ -186,7 +176,7 @@ public class belief {
         String[] seq2 = {"up, up, up", "1,1,1"};
         String[] seq3 = {"right, right, up", "1,1,end", "2,3"};
         String[] seq4 = {"up, right, right, right", "2,2,1,1", "1,1"};
-        parseArgs(seq2);
+        parseArgs(seq3);
         setUp();
         System.out.println("State: 0" );
         for (int row = maxRow-1; row > -1; row--) {
@@ -223,6 +213,5 @@ public class belief {
         }
 
     }
-
 
 }
